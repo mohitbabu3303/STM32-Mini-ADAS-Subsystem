@@ -89,12 +89,12 @@ To validate logic before hardware deployment, a simplified C-based simulation is
 
  Simulation Code
 
+```
 include <stdio.h>
 
 int main() {
 int lane_status, distance, speed;
 
-```
 printf("Enter lane status (0 = Normal, 1 = Lane Change): ");
 scanf("%d", &lane_status);
 
@@ -119,10 +119,10 @@ if (speed < 30) {
 }
 
 return 0;
-```
+
 
 }
-
+```
 ---
 
  How to Run (Windows)
@@ -218,7 +218,7 @@ ALERT: Obstacle Too Close!
  👨‍💻 Author
 
 Mohit Babu Pasam
-Email: [mohitbabuuol@gmail.com](mailto:mohitbabuuol@gmail.com)
+Email: mohitbabuuol@gmail.com
 
 ---
 
