@@ -1,0 +1,14 @@
+# Build folders
+Mini_ADAS_RTOS/Debug/
+Mini_ADAS_RTOS/Release/
+
+# Logs
+*.log
+
+# IDE settings
+.settings/
+.metadata/
+
+# OS files
+.DS_Store
+Thumbs.db
