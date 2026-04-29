@@ -142,25 +142,6 @@ adas
 
 ---
 
- 📂 Project Structure
-
-Mini_ADAS_RTOS/
-│
-├── Core/
-│   ├── Inc/        → Header files
-│   ├── Src/        → Application code (main.c, tasks)
-│
-├── Drivers/
-│   ├── CMSIS/      → Core processor support
-│   ├── HAL/        → Hardware abstraction layer
-│
-├── Middlewares/
-│   └── FreeRTOS/   → RTOS kernel & config
-│
-├── .ioc            → STM32Cube configuration file
-├── .gitignore      → Ignored files
-
----
 
  🔧 Important Implementation Details
 
@@ -218,6 +199,7 @@ ALERT: Obstacle Too Close!
  👨‍💻 Author
 
 Mohit Babu Pasam
+
 Email: mohitbabuuol@gmail.com
 
 ---
