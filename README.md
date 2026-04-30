@@ -2,6 +2,42 @@
 
  📌 Overview
 
+## 🧪 ADAS Testing & Validation System
+
+To ensure reliability before deploying to STM32 hardware, a complete testing pipeline is implemented.
+
+### Features
+
+- CSV-based test case execution
+- Automated PASS/FAIL validation
+- Execution time measurement
+- Logging system (`log.csv`)
+- Data visualization using Python (matplotlib)
+- Interactive dashboard using Streamlit
+
+### Workflow
+
+Test Cases → C Logic → CSV Log → Graphs → Dashboard
+
+### Files
+
+- ADAS_Testing/test.c → test execution engine
+- ADAS_Testing/test_cases.csv → input scenarios
+- ADAS_Testing/log.csv → output logs
+- ADAS_Testing/plot.py → graph visualization
+- ADAS_Testing/dashboard.py → interactive UI
+
+## 📊 Visualization & Dashboard
+
+The system provides:
+
+- Distance vs Test Case graph
+- Execution Time analysis
+- PASS/FAIL tracking
+- Interactive dashboard for live testing
+
+This simulates real-world ADAS validation tools used in industry.
+
 This project implements a real-time ADAS (Advanced Driver Assistance System) prototype on STM32 using FreeRTOS.
 
 It simulates core automotive safety features such as:
@@ -206,7 +242,7 @@ Email: mohitbabuuol@gmail.com
 
  📌 Notes
 
-This is a simulation-based prototype demonstrating ADAS architecture and embedded system design.
+This project includes both a simulation-based validation system and an embedded RTOS implementation, demonstrating a complete ADAS development pipeline.
 It can be extended to real-world automotive applications with hardware integration.
 
 ---

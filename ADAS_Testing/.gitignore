@@ -1,0 +1,9 @@
+# Ignore binaries
+*.exe
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Optional: ignore logs
+# log.csv

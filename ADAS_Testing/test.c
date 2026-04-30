@@ -1,8 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 int calculate_alert(int lane, int dist, int speed)
 {
+    // Force real computation
+    volatile int dummy = 0;
+    for(int i = 0; i < 1000000; i++)
+    {
+        dummy += i;
+    }
+
     if(speed < 30)
         return 0;
 
@@ -36,7 +44,7 @@ int main()
     // Skip header
     fgets(line, sizeof(line), fp);
 
-    fprintf(log, "id,lane,dist,speed,expected,actual,result\n");
+   fprintf(log, "id,lane,dist,speed,expected,actual,result,time\n");
 
     while(fgets(line, sizeof(line), fp))
     {
@@ -52,19 +60,25 @@ int main()
             continue;
         }
 
-        int actual = calculate_alert(lane, dist, speed);
+        clock_t start = clock();
+
+int actual = calculate_alert(lane, dist, speed);
+
+clock_t end = clock();
+
+double time_taken = ((double)(end - start)) / CLOCKS_PER_SEC;
 
         if(actual == expected)
         {
             printf("Test %d: PASS\n", id);
-            fprintf(log, "%d,%d,%d,%d,%d,%d,PASS\n",
-                    id, lane, dist, speed, expected, actual);
+            fprintf(log,  "%d,%d,%d,%d,%d,%d,PASS,%f\n", 
+                           id, lane, dist, speed, expected, actual, time_taken);
         }
         else
         {
             printf("Test %d: FAIL\n", id);
-            fprintf(log, "%d,%d,%d,%d,%d,%d,FAIL\n",
-                    id, lane, dist, speed, expected, actual);
+            fprintf(log, "%d,%d,%d,%d,%d,%d,FAIL,%f\n", 
+                         id, lane, dist, speed, expected, actual, time_taken);
         }
     }
 
