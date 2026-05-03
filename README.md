@@ -126,7 +126,7 @@ To validate logic before hardware deployment, a simplified C-based simulation is
  Simulation Code
 
 ```
-include <stdio.h>
+#include <stdio.h>
 
 int main() {
 int lane_status, distance, speed;
