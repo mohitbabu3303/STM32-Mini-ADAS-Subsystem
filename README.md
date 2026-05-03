@@ -51,6 +51,35 @@ The system is designed using a modular RTOS-based architecture, similar to real 
 
  🧠 System Architecture
 
+ ---
+
+## ⚡ Enhanced RTOS Architecture (Upgraded)
+
+The system was further improved to include a **multi-stage real-time processing pipeline**:
+
+SensorTask → FilterTask → DecisionTask → Event Flags → AlertTask → LoggerTask
+
+### Improvements Added 03/05/2026
+
+- **FilterTask** → Simulates real-world sensor noise filtering  
+- **Event Flags** → Enables event-driven alert triggering (no polling)  
+- **LoggerTask** → Centralized system logging  
+- **Task Priorities** → Ensures deterministic real-time execution  
+
+### Priority Design
+
+| Task | Priority |
+|------|--------|
+| DecisionTask | High |
+| SensorTask | Above Normal |
+| FilterTask | Normal |
+| AlertTask | Low |
+| LoggerTask | Low |
+
+This architecture closely resembles real automotive ECU software design.
+
+---
+
 SensorTask → sensorQueue → DecisionTask → alertQueue → AlertTask
 
 ---
@@ -219,7 +248,24 @@ ALERT: Obstacle Too Close!
 * Buzzer / LED alerts
 * CAN bus communication
 * Functional safety concepts (ASIL-inspired)
+---
 
+## ⚡ Event-Driven Design (RTOS Enhancement) 03/05/2026
+
+Instead of relying only on queues, the system uses **Event Flags** for alert signaling:
+
+- Lane deviation → LANE_ALERT_FLAG  
+- Obstacle detection → OBSTACLE_ALERT_FLAG  
+
+This allows:
+
+- Faster response time  
+- Reduced CPU usage  
+- Real-time event handling  
+
+This is a common design pattern in safety-critical embedded systems.
+
+---
 ---
 
  🎯 What This Project Demonstrates
@@ -244,6 +290,20 @@ Email: mohitbabuuol@gmail.com
 
 This project includes both a simulation-based validation system and an embedded RTOS implementation, demonstrating a complete ADAS development pipeline.
 It can be extended to real-world automotive applications with hardware integration.
+---
+
+## 🧪 Software-in-the-Loop (SIL) Validation 03/05/2026
+
+Since hardware was not available, the system was validated using:
+
+- C-based simulation (logic validation)
+- CSV-based test scenarios
+- Automated PASS/FAIL testing
+- Logging and visualization tools
+
+This approach ensures correctness before deployment to actual hardware, similar to industry testing workflows.
+
+---
 
 ---
 
