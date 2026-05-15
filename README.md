@@ -51,6 +51,10 @@ The system is designed using a modular RTOS-based architecture, similar to real 
 
  🧠 System Architecture
 
+### Base RTOS Pipeline
+
+SensorTask → sensorQueue → DecisionTask → alertQueue → AlertTask
+
  ---
 
 ## ⚡ Enhanced RTOS Architecture (Upgraded)
@@ -114,6 +118,8 @@ SensorTask → sensorQueue → DecisionTask → alertQueue → AlertTask
 * Modular and scalable system design
 * UART-based debugging output (printf redirection)
 * Automotive-style pipeline architecture
+* Dynamic ADAS risk assessment system
+* Intelligent action recommendation based on speed and obstacle distance
 
 ---
 
@@ -136,6 +142,33 @@ SensorTask → sensorQueue → DecisionTask → alertQueue → AlertTask
 5. AlertTask outputs:
    ALERT: Lane Deviation!
    ALERT: Obstacle Too Close!
+
+---
+
+## ⚠️ Dynamic Risk Assessment System (15/05/2026)
+
+The ADAS logic was further upgraded with a dynamic risk evaluation system.
+
+### Risk Levels
+
+| Risk Level | Trigger Condition |
+|------------|------------------|
+| SAFE | Normal conditions |
+| LOW_RISK | Moderate speed / distance |
+| MEDIUM_RISK | High speed or close obstacle |
+| HIGH_RISK | Very high speed or dangerous distance |
+| CRITICAL_RISK | Collision-level conditions |
+
+### Example Actions
+
+- Stay Alert
+- Reduce Speed
+- Slow Down Immediately
+- APPLY BRAKES!
+
+This upgrade transforms the project from a basic warning system into a more intelligent ADAS decision-making prototype.
+
+---
 
 ---
 
@@ -235,9 +268,11 @@ return len;
 
  📊 Example Output
 
-Sensor Sent -> Lane:1 Dist:12
+Sensor Sent -> LANE=1,DIST=8,SPEED=110
 ALERT: Lane Deviation!
 ALERT: Obstacle Too Close!
+RISK LEVEL: HIGH
+ACTION: Slow Down Immediately
 
 ---
 
@@ -305,5 +340,14 @@ This approach ensures correctness before deployment to actual hardware, similar 
 
 ---
 
----
+## 📌 Current Project Status
 
+✅ RTOS-based embedded architecture implemented  
+✅ Event-driven alert handling completed  
+✅ Software-in-the-Loop (SIL) validation completed  
+✅ CSV-based automated testing implemented  
+✅ Dynamic ADAS risk assessment implemented  
+
+Project currently represents a software-focused automotive ADAS prototype designed using industry-inspired embedded system principles.
+
+---
