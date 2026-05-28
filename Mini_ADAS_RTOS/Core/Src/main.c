@@ -22,6 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "can.h"
+/* USER CODE END Includes */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,26 +45,13 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+CAN_HandleTypeDef hcan1;
 UART_HandleTypeDef huart1;
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for ObstacleTask */
-osThreadId_t ObstacleTaskHandle;
-const osThreadAttr_t ObstacleTask_attributes = {
-  .name = "ObstacleTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for myTask03 */
-osThreadId_t myTask03Handle;
-const osThreadAttr_t myTask03_attributes = {
-  .name = "myTask03",
+/* Definitions for SensorTask */
+osThreadId_t SensorTaskHandle;
+const osThreadAttr_t SensorTask_attributes = {
+  .name = "SensorTask",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
@@ -73,12 +62,40 @@ const osThreadAttr_t DecisionTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
-/* Definitions for AlertTask */
-osThreadId_t AlertTaskHandle;
-const osThreadAttr_t AlertTask_attributes = {
-  .name = "AlertTask",
+/* Definitions for CAN_TxTask */
+osThreadId_t CAN_TxTaskHandle;
+const osThreadAttr_t CAN_TxTask_attributes = {
+  .name = "CAN_TxTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for CAN_RxTask */
+osThreadId_t CAN_RxTaskHandle;
+const osThreadAttr_t CAN_RxTask_attributes = {
+  .name = "CAN_RxTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for LoggerTask */
+osThreadId_t LoggerTaskHandle;
+const osThreadAttr_t LoggerTask_attributes = {
+  .name = "LoggerTask",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for DashboardTask */
+osThreadId_t DashboardTaskHandle;
+const osThreadAttr_t DashboardTask_attributes = {
+  .name = "DashboardTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for HealthMonitorTask */
+osThreadId_t HealthMonitorTaskHandle;
+const osThreadAttr_t HealthMonitorTask_attributes = {
+  .name = "HealthMonitorTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityHigh,
 };
 /* USER CODE BEGIN PV */
 osMessageQueueId_t sensorQueue;
@@ -86,14 +103,17 @@ osMessageQueueId_t alertQueue;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
+static void MX_CAN1_Init(void);
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
-void StartDefaultTask(void *argument);
-void StartTask02(void *argument);
-void autofilled(void *argument);
-void StartTask04(void *argument);
-void StartTask05(void *argument);
+void StartSensorTask(void *argument);
+void StartDecisionTask(void *argument);
+void StartCAN_TxTask(void *argument);
+void StartCAN_RxTask(void *argument);
+void StartLoggerTask(void *argument);
+void StartDashboardTask(void *argument);
+void StartHealthMonitorTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -144,9 +164,38 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+  MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
+  CAN_FilterTypeDef sFilterConfig;
+
+  sFilterConfig.FilterBank = 0;
+  sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+  sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  sFilterConfig.FilterIdHigh = 0x0000;
+  sFilterConfig.FilterIdLow = 0x0000;
+  sFilterConfig.FilterMaskIdHigh = 0x0000;
+  sFilterConfig.FilterMaskIdLow = 0x0000;
+  sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+  sFilterConfig.FilterActivation = ENABLE;
+  sFilterConfig.SlaveStartFilterBank = 14;
+
+  if (HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  if (HAL_CAN_Start(&hcan1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+/* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();
@@ -169,20 +218,26 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
-  /* creation of ObstacleTask */
-  ObstacleTaskHandle = osThreadNew(StartTask02, NULL, &ObstacleTask_attributes);
-
-  /* creation of myTask03 */
-  myTask03Handle = osThreadNew(autofilled, NULL, &myTask03_attributes);
+  /* creation of SensorTask */
+  SensorTaskHandle = osThreadNew(StartSensorTask, NULL, &SensorTask_attributes);
 
   /* creation of DecisionTask */
-  DecisionTaskHandle = osThreadNew(StartTask04, NULL, &DecisionTask_attributes);
+  DecisionTaskHandle = osThreadNew(StartDecisionTask, NULL, &DecisionTask_attributes);
 
-  /* creation of AlertTask */
-  AlertTaskHandle = osThreadNew(StartTask05, NULL, &AlertTask_attributes);
+  /* creation of CAN_TxTask */
+  CAN_TxTaskHandle = osThreadNew(StartCAN_TxTask, NULL, &CAN_TxTask_attributes);
+
+  /* creation of CAN_RxTask */
+  CAN_RxTaskHandle = osThreadNew(StartCAN_RxTask, NULL, &CAN_RxTask_attributes);
+
+  /* creation of LoggerTask */
+  LoggerTaskHandle = osThreadNew(StartLoggerTask, NULL, &LoggerTask_attributes);
+
+  /* creation of DashboardTask */
+  DashboardTaskHandle = osThreadNew(StartDashboardTask, NULL, &DashboardTask_attributes);
+
+  /* creation of HealthMonitorTask */
+  HealthMonitorTaskHandle = osThreadNew(StartHealthMonitorTask, NULL, &HealthMonitorTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -315,127 +370,149 @@ int _write(int file, char *ptr, int len)
 }
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+
+/* USER CODE BEGIN Header_StartSensorTask */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the SensorTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_StartSensorTask */
+void StartSensorTask(void *argument)
 {
-  /* USER CODE BEGIN 5 */
+  /* USER CODE BEGIN StartSensorTask */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    SensorData_t data;
+    data.lane_status = rand() % 2;
+    data.obstacle_distance = rand() % 100;
+    osMessageQueuePut(sensorQueue, &data, 0, 0);
+    printf("Sensor Sent -> Lane:%d Dist:%d\n",
+           data.lane_status, data.obstacle_distance);
+    osDelay(1000);
   }
-  /* USER CODE END 5 */
+  /* USER CODE END StartSensorTask */
 }
 
-/* USER CODE BEGIN Header_StartTask02 */
-/**
-* @brief Function implementing the ObstacleTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void *argument)
-{
-  /* USER CODE BEGIN StartTask02 */
-  /* Infinite loop */
-  for(;;)
-  {
-	  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-	  osDelay(500);
-  }
-  /* USER CODE END StartTask02 */
-}
-
-/* USER CODE BEGIN Header_autofilled */
-/**
-* @brief Function implementing the myTask03 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_autofilled */
-void autofilled(void *argument)
-{
-  /* USER CODE BEGIN autofilled */
-  /* Infinite loop */
-  for(;;)
-  {
-	  SensorData_t data;
-
-	      data.lane_status = rand() % 2;
-	      data.obstacle_distance = rand() % 100;
-
-	      osMessageQueuePut(sensorQueue, &data, 0, 0);
-
-	      printf("Sensor Sent -> Lane:%d Dist:%d\n",
-	             data.lane_status, data.obstacle_distance);
-
-	      osDelay(1000);
-  }
-  /* USER CODE END autofilled */
-}
-
-/* USER CODE BEGIN Header_StartTask04 */
+/* USER CODE BEGIN Header_StartDecisionTask */
 /**
 * @brief Function implementing the DecisionTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask04 */
-void StartTask04(void *argument)
+/* USER CODE END Header_StartDecisionTask */
+void StartDecisionTask(void *argument)
 {
-  /* USER CODE BEGIN StartTask04 */
+  /* USER CODE BEGIN StartDecisionTask */
   /* Infinite loop */
   for(;;)
   {
-	  SensorData_t data;
-	      AlertData_t alert;
-
-	      if(osMessageQueueGet(sensorQueue, &data, NULL, osWaitForever) == osOK)
-	      {
-	          alert.lane_warning = (data.lane_status == 1);
-	          alert.obstacle_warning = (data.obstacle_distance < 20);
-
-	          osMessageQueuePut(alertQueue, &alert, 0, 0);
-	      }
+    SensorData_t data;
+    AlertData_t alert;
+    if(osMessageQueueGet(sensorQueue, &data, NULL, osWaitForever) == osOK)
+    {
+        alert.lane_warning = (data.lane_status == 1);
+        alert.obstacle_warning = (data.obstacle_distance < 20);
+        osMessageQueuePut(alertQueue, &alert, 0, 0);
+    }
   }
-  /* USER CODE END StartTask04 */
+  /* USER CODE END StartDecisionTask */
 }
 
-/* USER CODE BEGIN Header_StartTask05 */
+/* USER CODE BEGIN Header_StartCAN_TxTask */
 /**
-* @brief Function implementing the AlertTask thread.
+* @brief Function implementing the CAN_TxTask thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask05 */
-void StartTask05(void *argument)
+/* USER CODE END Header_StartCAN_TxTask */
+void StartCAN_TxTask(void *argument)
 {
-  /* USER CODE BEGIN StartTask05 */
+  /* USER CODE BEGIN StartCAN_TxTask */
   /* Infinite loop */
   for(;;)
   {
-	  AlertData_t alert;
-
-	     if(osMessageQueueGet(alertQueue, &alert, NULL, osWaitForever) == osOK)
-	     {
-	         if(alert.lane_warning)
-	         {
-	             printf("ALERT: Lane Deviation!\n");
-	         }
-
-	         if(alert.obstacle_warning)
-	         {
-	             printf("ALERT: Obstacle Too Close!\n");
-	         }
-	     }
+    // Implement CAN Transmit logic here
+    osDelay(100);
   }
-  /* USER CODE END StartTask05 */
+  /* USER CODE END StartCAN_TxTask */
+}
+
+/* USER CODE BEGIN Header_StartCAN_RxTask */
+/**
+* @brief Function implementing the CAN_RxTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartCAN_RxTask */
+void StartCAN_RxTask(void *argument)
+{
+  /* USER CODE BEGIN StartCAN_RxTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    // Implement CAN Receive logic here
+    osDelay(100);
+  }
+  /* USER CODE END StartCAN_RxTask */
+}
+
+/* USER CODE BEGIN Header_StartLoggerTask */
+/**
+* @brief Function implementing the LoggerTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartLoggerTask */
+void StartLoggerTask(void *argument)
+{
+  /* USER CODE BEGIN StartLoggerTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    // Implement logging logic here
+    osDelay(1000);
+  }
+  /* USER CODE END StartLoggerTask */
+}
+
+/* USER CODE BEGIN Header_StartDashboardTask */
+/**
+* @brief Function implementing the DashboardTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartDashboardTask */
+void StartDashboardTask(void *argument)
+{
+  /* USER CODE BEGIN StartDashboardTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    // Implement dashboard data preparation/sending logic here
+    osDelay(500);
+  }
+  /* USER CODE END StartDashboardTask */
+}
+
+/* USER CODE BEGIN Header_StartHealthMonitorTask */
+/**
+* @brief Function implementing the HealthMonitorTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartHealthMonitorTask */
+void StartHealthMonitorTask(void *argument)
+{
+  /* USER CODE BEGIN StartHealthMonitorTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    // Implement health monitoring logic here
+    osDelay(2000);
+  }
+  /* USER CODE END StartHealthMonitorTask */
 }
 
 /**

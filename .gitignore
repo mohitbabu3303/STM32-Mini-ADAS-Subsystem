@@ -1,15 +1,59 @@
-# Build folders
-Mini_ADAS_RTOS/Debug/
-Mini_ADAS_RTOS/Release/
+# Build artifacts
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+*.su
+*.o
+*.d
 
-# Logs
+# CubeIDE specific files
+.metadata
+.settings
+.project
+.cproject
+.mxproject
+.launch
+
+# Debug/Release folders
+Debug/
+Release/
+build/
+
+# SW4STM32 specific files
+SW4STM32/
+
+# Keil MDK specific files
+MDK-ARM/
+
+# IAR EWARM specific files
+EWARM/
+
+# Backup files
+*~
+*.bak
+*.swo
+*.swp
+*.swn
+
+# Eclipse specific files
+.history/
+.snap/
+.recommenders/
+.externalToolBuilders/
+.indexes/
+.apt_generated/
+.classpath
+.project
+
+# FreeRTOS specific
+FreeRTOS_Source_Code/
+
+# User-specific files
 *.log
+*.DS_Store
+Thumbs.db
 
-# IDE settings
-.settings/
-.metadata/
-
-# OS files
-.DS_Store
-Thumbs.dba.exe adas.exe
-a.exe adas.exe
+# STM32CubeMX generated files that can be regenerated
+# For this project, it's good to keep the .ioc file.
