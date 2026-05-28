@@ -1,0 +1,25 @@
+# Executables
+*.exe
+
+# STM32 Build folders
+Debug/
+Release/
+build/
+
+# Binary artifacts
+*.o
+*.elf
+*.bin
+*.map
+*.hex
+
+# Temporary files
+*.log
+*.tmp
+
+# VSCode settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
