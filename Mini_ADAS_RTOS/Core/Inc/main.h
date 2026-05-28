@@ -31,11 +31,32 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "can.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
+
+extern CAN_HandleTypeDef hcan1;
+
+extern osThreadId_t SensorTaskHandle;
+extern osThreadId_t DecisionTaskHandle;
+extern osThreadId_t CAN_TxTaskHandle;
+extern osThreadId_t CAN_RxTaskHandle;
+extern osThreadId_t LoggerTaskHandle;
+extern osThreadId_t DashboardTaskHandle;
+extern osThreadId_t HealthMonitorTaskHandle;
+
+typedef struct
+{
+    int lane_status;
+    int obstacle_distance;
+} SensorData_t;
+
+typedef struct
+{
+    int lane_warning;
+    int obstacle_warning;
+} AlertData_t;
 
 /* USER CODE END ET */
 
@@ -51,6 +72,13 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
+void StartSensorTask(void *argument);
+void StartDecisionTask(void *argument);
+void StartCAN_TxTask(void *argument);
+void StartCAN_RxTask(void *argument);
+void StartLoggerTask(void *argument);
+void StartDashboardTask(void *argument);
+void StartHealthMonitorTask(void *argument);
 
 /* USER CODE BEGIN EFP */
 
