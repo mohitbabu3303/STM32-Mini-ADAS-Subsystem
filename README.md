@@ -190,35 +190,73 @@ To validate logic before hardware deployment, a simplified C-based simulation is
 ```
 #include <stdio.h>
 
-int main() {
-int lane_status, distance, speed;
+int main()
+{
+    int lane_status;
+    int distance;
+    int speed;
 
-printf("Enter lane status (0 = Normal, 1 = Lane Change): ");
-scanf("%d", &lane_status);
+    printf("=====================================\n");
+    printf("      MINI ADAS SIMULATION\n");
+    printf("=====================================\n");
 
-printf("Enter obstacle distance (in meters): ");
-scanf("%d", &distance);
+    // User Inputs
+    printf("Enter Lane Status (0 = Normal, 1 = Lane Change): ");
+    scanf("%d", &lane_status);
 
-printf("Enter vehicle speed (kmph): ");
-scanf("%d", &speed);
+    printf("Enter Obstacle Distance (meters): ");
+    scanf("%d", &distance);
 
-if (speed < 30) {
-    printf("ADAS inactive (Low Speed)\n");
-} else {
-    if (lane_status == 1) {
-        printf("WARNING: Lane Deviation!\n");
+    printf("Enter Vehicle Speed (km/h): ");
+    scanf("%d", &speed);
+
+    printf("\n-------------------------------------\n");
+
+    /* ADAS Activation Condition */
+    if (speed < 30)
+    {
+        printf("ADAS STATUS : NOT ACTIVATED\n");
+        printf("Reason      : Vehicle speed below 30 km/h\n");
     }
-    if (distance < 20) {
-        printf("ALERT: Obstacle Too Close!\n");
+    else
+    {
+        printf("ADAS STATUS : ACTIVATED\n\n");
+
+        /* Lane Departure Warning */
+        if (lane_status == 1)
+        {
+            printf("[WARNING] Lane Departure Detected!\n");
+        }
+        else
+        {
+            printf("[OK] Lane Position Normal\n");
+        }
+
+        /* Forward Collision Warning */
+        if (distance < 20)
+        {
+            printf("[ALERT] Obstacle Too Close!\n");
+        }
+        else
+        {
+            printf("[OK] Safe Following Distance\n");
+        }
+
+        /* Overspeed Warning */
+        if (speed > 120)
+        {
+            printf("[WARNING] Overspeed Detected!\n");
+        }
+        else
+        {
+            printf("[OK] Vehicle Speed Normal\n");
+        }
     }
-    if (speed > 120) {
-        printf("WARNING: Overspeed!\n");
-    }
-}
 
-return 0;
+    printf("\n-------------------------------------\n");
+    printf("System Check Completed.\n");
 
-
+    return 0;
 }
 ```
 ---
