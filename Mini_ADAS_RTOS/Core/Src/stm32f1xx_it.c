@@ -57,6 +57,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern CAN_HandleTypeDef hcan;
 
 /* USER CODE BEGIN EV */
 
@@ -86,6 +87,7 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
+  APP_DEBUG_BREAK(); /* fault: inspect the stacked PC/LR in the debugger */
 
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
@@ -101,6 +103,7 @@ void HardFault_Handler(void)
 void MemManage_Handler(void)
 {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
+  APP_DEBUG_BREAK(); /* fault: inspect the stacked PC/LR in the debugger */
 
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1)
@@ -116,6 +119,7 @@ void MemManage_Handler(void)
 void BusFault_Handler(void)
 {
   /* USER CODE BEGIN BusFault_IRQn 0 */
+  APP_DEBUG_BREAK(); /* fault: inspect the stacked PC/LR in the debugger */
 
   /* USER CODE END BusFault_IRQn 0 */
   while (1)
@@ -131,6 +135,7 @@ void BusFault_Handler(void)
 void UsageFault_Handler(void)
 {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
+  APP_DEBUG_BREAK(); /* fault: inspect the stacked PC/LR in the debugger */
 
   /* USER CODE END UsageFault_IRQn 0 */
   while (1)
@@ -175,12 +180,27 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 1 */
 }
 
+
 /******************************************************************************/
 /* STM32F1xx Peripheral Interrupt Handlers                                    */
 /* Add here the Interrupt Handlers for the used peripherals.                  */
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles USB low priority or CAN RX0 interrupts.
+  */
+void USB_LP_CAN1_RX0_IRQHandler(void)
+{
+  /* USER CODE BEGIN USB_LP_CAN1_RX0_IRQn 0 */
+
+  /* USER CODE END USB_LP_CAN1_RX0_IRQn 0 */
+  HAL_CAN_IRQHandler(&hcan);
+  /* USER CODE BEGIN USB_LP_CAN1_RX0_IRQn 1 */
+
+  /* USER CODE END USB_LP_CAN1_RX0_IRQn 1 */
+}
 
 /* USER CODE BEGIN 1 */
 

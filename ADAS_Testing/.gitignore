@@ -1,9 +1,8 @@
 # Ignore binaries
 *.exe
+adas_test
+adas_sim
 
 # Ignore Python cache
 __pycache__/
 *.pyc
-
-# Optional: ignore logs
-# log.csv

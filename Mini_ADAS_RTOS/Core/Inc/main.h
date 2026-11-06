@@ -31,32 +31,11 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "can.h"
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
-
-extern CAN_HandleTypeDef hcan1;
-
-extern osThreadId_t SensorTaskHandle;
-extern osThreadId_t DecisionTaskHandle;
-extern osThreadId_t CAN_TxTaskHandle;
-extern osThreadId_t CAN_RxTaskHandle;
-extern osThreadId_t LoggerTaskHandle;
-extern osThreadId_t DashboardTaskHandle;
-extern osThreadId_t HealthMonitorTaskHandle;
-
-typedef struct
-{
-    int lane_status;
-    int obstacle_distance;
-} SensorData_t;
-
-typedef struct
-{
-    int lane_warning;
-    int obstacle_warning;
-} AlertData_t;
+/* USER CODE BEGIN ET */
 
 /* USER CODE END ET */
 
@@ -67,24 +46,28 @@ typedef struct
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
+/* Halt in the debugger if one is attached (no effect when running stand-alone;
+ * a BKPT without debugger would otherwise escalate to HardFault). */
+#define APP_DEBUG_BREAK()                                                  \
+  do {                                                                     \
+    if ((CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk) != 0U) {        \
+      __BKPT(0);                                                           \
+    }                                                                      \
+  } while (0)
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
-void StartSensorTask(void *argument);
-void StartDecisionTask(void *argument);
-void StartCAN_TxTask(void *argument);
-void StartCAN_RxTask(void *argument);
-void StartLoggerTask(void *argument);
-void StartDashboardTask(void *argument);
-void StartHealthMonitorTask(void *argument);
 
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define STATUS_LED_Pin GPIO_PIN_13
+#define STATUS_LED_GPIO_Port GPIOC
+#define ALERT_LED_Pin GPIO_PIN_5
+#define ALERT_LED_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 

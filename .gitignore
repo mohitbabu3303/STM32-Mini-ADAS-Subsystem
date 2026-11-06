@@ -8,13 +8,10 @@
 *.o
 *.d
 
-# CubeIDE specific files
+# CubeIDE workspace files (the project files .project/.cproject/.mxproject
+# and the .launch debug config ARE committed: they are needed to import/debug)
 .metadata
 .settings
-.project
-.cproject
-.mxproject
-.launch
 
 # Debug/Release folders
 Debug/
@@ -45,7 +42,6 @@ EWARM/
 .indexes/
 .apt_generated/
 .classpath
-.project
 
 # FreeRTOS specific
 FreeRTOS_Source_Code/

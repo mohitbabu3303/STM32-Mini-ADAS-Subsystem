@@ -14,6 +14,12 @@
   * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
+  *
+  * Mini ADAS: all application logic lives in app_*.c / adas_*.c. This file
+  * only contains CubeMX-generated init code plus calls placed inside
+  * USER CODE sections, so it survives "Generate Code" in CubeMX.
+  *
+  ******************************************************************************
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
@@ -22,11 +28,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "can.h"
-/* USER CODE END Includes */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,74 +47,74 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-CAN_HandleTypeDef hcan1;
+CAN_HandleTypeDef hcan;
+
 UART_HandleTypeDef huart1;
 
 /* Definitions for SensorTask */
 osThreadId_t SensorTaskHandle;
 const osThreadAttr_t SensorTask_attributes = {
   .name = "SensorTask",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for DecisionTask */
 osThreadId_t DecisionTaskHandle;
 const osThreadAttr_t DecisionTask_attributes = {
   .name = "DecisionTask",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
+};
+/* Definitions for AlertTask */
+osThreadId_t AlertTaskHandle;
+const osThreadAttr_t AlertTask_attributes = {
+  .name = "AlertTask",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for CAN_TxTask */
 osThreadId_t CAN_TxTaskHandle;
 const osThreadAttr_t CAN_TxTask_attributes = {
   .name = "CAN_TxTask",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for CAN_RxTask */
 osThreadId_t CAN_RxTaskHandle;
 const osThreadAttr_t CAN_RxTask_attributes = {
   .name = "CAN_RxTask",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for LoggerTask */
 osThreadId_t LoggerTaskHandle;
 const osThreadAttr_t LoggerTask_attributes = {
   .name = "LoggerTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
-/* Definitions for DashboardTask */
-osThreadId_t DashboardTaskHandle;
-const osThreadAttr_t DashboardTask_attributes = {
-  .name = "DashboardTask",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for HealthMonitorTask */
 osThreadId_t HealthMonitorTaskHandle;
 const osThreadAttr_t HealthMonitorTask_attributes = {
   .name = "HealthMonitorTask",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
 /* USER CODE BEGIN PV */
-osMessageQueueId_t sensorQueue;
-osMessageQueueId_t alertQueue;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-static void MX_CAN1_Init(void);
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_CAN_Init(void);
 void StartSensorTask(void *argument);
 void StartDecisionTask(void *argument);
+void StartAlertTask(void *argument);
 void StartCAN_TxTask(void *argument);
 void StartCAN_RxTask(void *argument);
 void StartLoggerTask(void *argument);
-void StartDashboardTask(void *argument);
 void StartHealthMonitorTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -121,17 +123,7 @@ void StartHealthMonitorTask(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-typedef struct
-{
-    int lane_status;
-    int obstacle_distance;
-} SensorData_t;
 
-typedef struct
-{
-    int lane_warning;
-    int obstacle_warning;
-} AlertData_t;
 /* USER CODE END 0 */
 
 /**
@@ -164,38 +156,18 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
-  MX_CAN1_Init();
+  MX_CAN_Init();
   /* USER CODE BEGIN 2 */
-
-  CAN_FilterTypeDef sFilterConfig;
-
-  sFilterConfig.FilterBank = 0;
-  sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-  sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-  sFilterConfig.FilterIdHigh = 0x0000;
-  sFilterConfig.FilterIdLow = 0x0000;
-  sFilterConfig.FilterMaskIdHigh = 0x0000;
-  sFilterConfig.FilterMaskIdLow = 0x0000;
-  sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
-  sFilterConfig.FilterActivation = ENABLE;
-  sFilterConfig.SlaveStartFilterBank = 14;
-
-  if (HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig) != HAL_OK)
+  /* IMPORTANT: everything that relies on HAL_GetTick() must run here, BEFORE
+   * the first FreeRTOS object is created. Creating a queue/thread masks
+   * interrupts (incl. SysTick) until osKernelStart(). */
+  App_PrintBootBanner();
+  if (AppCan_Start() != HAL_OK)
   {
+    AppLog_Printf("FATAL: CAN start failed");
     Error_Handler();
   }
-
-  if (HAL_CAN_Start(&hcan1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  if (HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-/* USER CODE END 2 */
+  /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();
@@ -213,8 +185,7 @@ int main(void)
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  sensorQueue = osMessageQueueNew(5, sizeof(SensorData_t), NULL);
-  alertQueue  = osMessageQueueNew(5, sizeof(AlertData_t), NULL);
+  App_CreateRtosObjects();
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -223,6 +194,9 @@ int main(void)
 
   /* creation of DecisionTask */
   DecisionTaskHandle = osThreadNew(StartDecisionTask, NULL, &DecisionTask_attributes);
+
+  /* creation of AlertTask */
+  AlertTaskHandle = osThreadNew(StartAlertTask, NULL, &AlertTask_attributes);
 
   /* creation of CAN_TxTask */
   CAN_TxTaskHandle = osThreadNew(StartCAN_TxTask, NULL, &CAN_TxTask_attributes);
@@ -233,14 +207,19 @@ int main(void)
   /* creation of LoggerTask */
   LoggerTaskHandle = osThreadNew(StartLoggerTask, NULL, &LoggerTask_attributes);
 
-  /* creation of DashboardTask */
-  DashboardTaskHandle = osThreadNew(StartDashboardTask, NULL, &DashboardTask_attributes);
-
   /* creation of HealthMonitorTask */
   HealthMonitorTaskHandle = osThreadNew(StartHealthMonitorTask, NULL, &HealthMonitorTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+  /* A NULL handle means the FreeRTOS heap is too small: stop here instead of
+   * running with missing tasks (this silently happened before). */
+  if ((SensorTaskHandle == NULL) || (DecisionTaskHandle == NULL) ||
+      (AlertTaskHandle == NULL) || (CAN_TxTaskHandle == NULL) ||
+      (CAN_RxTaskHandle == NULL) || (LoggerTaskHandle == NULL) ||
+      (HealthMonitorTaskHandle == NULL))
+  {
+    Error_Handler();
+  }
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -300,6 +279,48 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief CAN Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_CAN_Init(void)
+{
+
+  /* USER CODE BEGIN CAN_Init 0 */
+  /* Bit timing @ APB1 = 8 MHz:
+   *   tq = Prescaler / 8 MHz = 125 ns
+   *   bit = 1 (sync) + 13 (BS1) + 2 (BS2) = 16 tq = 2 us  -> 500 kbit/s
+   *   sample point = (1 + 13) / 16 = 87.5 % (CiA recommendation)
+   * Silent loopback: self-test without transceiver. For a real bus set
+   * Mode = Normal in CubeMX and fit a CAN transceiver on PA11/PA12. */
+  /* USER CODE END CAN_Init 0 */
+
+  /* USER CODE BEGIN CAN_Init 1 */
+
+  /* USER CODE END CAN_Init 1 */
+  hcan.Instance = CAN1;
+  hcan.Init.Prescaler = 1;
+  hcan.Init.Mode = CAN_MODE_SILENT_LOOPBACK;
+  hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
+  hcan.Init.TimeSeg1 = CAN_BS1_13TQ;
+  hcan.Init.TimeSeg2 = CAN_BS2_2TQ;
+  hcan.Init.TimeTriggeredMode = DISABLE;
+  hcan.Init.AutoBusOff = ENABLE;
+  hcan.Init.AutoWakeUp = DISABLE;
+  hcan.Init.AutoRetransmission = ENABLE;
+  hcan.Init.ReceiveFifoLocked = DISABLE;
+  hcan.Init.TransmitFifoPriority = DISABLE;
+  if (HAL_CAN_Init(&hcan) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN CAN_Init 2 */
+
+  /* USER CODE END CAN_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -315,7 +336,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
+  huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -345,17 +366,28 @@ static void MX_GPIO_Init(void)
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pin : PA5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(ALERT_LED_GPIO_Port, ALERT_LED_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : STATUS_LED_Pin */
+  GPIO_InitStruct.Pin = STATUS_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(STATUS_LED_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : ALERT_LED_Pin */
+  GPIO_InitStruct.Pin = ALERT_LED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(ALERT_LED_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -363,13 +395,8 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-int _write(int file, char *ptr, int len)
-{
-    HAL_UART_Transmit(&huart1, (uint8_t*)ptr, len, HAL_MAX_DELAY);
-    return len;
-}
-/* USER CODE END 4 */
 
+/* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartSensorTask */
 /**
@@ -380,19 +407,15 @@ int _write(int file, char *ptr, int len)
 /* USER CODE END Header_StartSensorTask */
 void StartSensorTask(void *argument)
 {
-  /* USER CODE BEGIN StartSensorTask */
+  /* USER CODE BEGIN 5 */
+  (void)argument;
+  AppTask_Sensor();
   /* Infinite loop */
   for(;;)
   {
-    SensorData_t data;
-    data.lane_status = rand() % 2;
-    data.obstacle_distance = rand() % 100;
-    osMessageQueuePut(sensorQueue, &data, 0, 0);
-    printf("Sensor Sent -> Lane:%d Dist:%d\n",
-           data.lane_status, data.obstacle_distance);
-    osDelay(1000);
+    osDelay(1);
   }
-  /* USER CODE END StartSensorTask */
+  /* USER CODE END 5 */
 }
 
 /* USER CODE BEGIN Header_StartDecisionTask */
@@ -405,19 +428,34 @@ void StartSensorTask(void *argument)
 void StartDecisionTask(void *argument)
 {
   /* USER CODE BEGIN StartDecisionTask */
+  (void)argument;
+  AppTask_Decision();
   /* Infinite loop */
   for(;;)
   {
-    SensorData_t data;
-    AlertData_t alert;
-    if(osMessageQueueGet(sensorQueue, &data, NULL, osWaitForever) == osOK)
-    {
-        alert.lane_warning = (data.lane_status == 1);
-        alert.obstacle_warning = (data.obstacle_distance < 20);
-        osMessageQueuePut(alertQueue, &alert, 0, 0);
-    }
+    osDelay(1);
   }
   /* USER CODE END StartDecisionTask */
+}
+
+/* USER CODE BEGIN Header_StartAlertTask */
+/**
+* @brief Function implementing the AlertTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartAlertTask */
+void StartAlertTask(void *argument)
+{
+  /* USER CODE BEGIN StartAlertTask */
+  (void)argument;
+  AppTask_Alert();
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartAlertTask */
 }
 
 /* USER CODE BEGIN Header_StartCAN_TxTask */
@@ -430,11 +468,12 @@ void StartDecisionTask(void *argument)
 void StartCAN_TxTask(void *argument)
 {
   /* USER CODE BEGIN StartCAN_TxTask */
+  (void)argument;
+  AppTask_CanTx();
   /* Infinite loop */
   for(;;)
   {
-    // Implement CAN Transmit logic here
-    osDelay(100);
+    osDelay(1);
   }
   /* USER CODE END StartCAN_TxTask */
 }
@@ -449,11 +488,12 @@ void StartCAN_TxTask(void *argument)
 void StartCAN_RxTask(void *argument)
 {
   /* USER CODE BEGIN StartCAN_RxTask */
+  (void)argument;
+  AppTask_CanRx();
   /* Infinite loop */
   for(;;)
   {
-    // Implement CAN Receive logic here
-    osDelay(100);
+    osDelay(1);
   }
   /* USER CODE END StartCAN_RxTask */
 }
@@ -468,32 +508,14 @@ void StartCAN_RxTask(void *argument)
 void StartLoggerTask(void *argument)
 {
   /* USER CODE BEGIN StartLoggerTask */
+  (void)argument;
+  AppTask_Logger();
   /* Infinite loop */
   for(;;)
   {
-    // Implement logging logic here
-    osDelay(1000);
+    osDelay(1);
   }
   /* USER CODE END StartLoggerTask */
-}
-
-/* USER CODE BEGIN Header_StartDashboardTask */
-/**
-* @brief Function implementing the DashboardTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartDashboardTask */
-void StartDashboardTask(void *argument)
-{
-  /* USER CODE BEGIN StartDashboardTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    // Implement dashboard data preparation/sending logic here
-    osDelay(500);
-  }
-  /* USER CODE END StartDashboardTask */
 }
 
 /* USER CODE BEGIN Header_StartHealthMonitorTask */
@@ -506,11 +528,12 @@ void StartDashboardTask(void *argument)
 void StartHealthMonitorTask(void *argument)
 {
   /* USER CODE BEGIN StartHealthMonitorTask */
+  (void)argument;
+  AppTask_HealthMonitor();
   /* Infinite loop */
   for(;;)
   {
-    // Implement health monitoring logic here
-    osDelay(2000);
+    osDelay(1);
   }
   /* USER CODE END StartHealthMonitorTask */
 }
@@ -524,8 +547,16 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+  APP_DEBUG_BREAK();   /* debugger attached: halts here, check the call stack */
+
+  /* No debugger: fast-blink the on-board LED (PC13) forever. */
   while (1)
   {
+    volatile uint32_t delay;
+    HAL_GPIO_TogglePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin);
+    for (delay = 0U; delay < 100000U; delay++)
+    {
+    }
   }
   /* USER CODE END Error_Handler_Debug */
 }
@@ -542,6 +573,9 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  (void)file;
+  (void)line;
+  APP_DEBUG_BREAK();
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
