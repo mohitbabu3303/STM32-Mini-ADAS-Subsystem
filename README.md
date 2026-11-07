@@ -171,8 +171,8 @@ Testing on real hardware exposed issues that were not visible in simulation:
 
 ## ▶️ Build, Flash & Run (STM32F407 Discovery)
 
-1. Open STM32CubeIDE → *File → Import → Existing Projects into Workspace* → select `Mini_ADAS_F407`.
-   (Alternatively: *File → New → STM32 Project from an Existing STM32CubeMX Configuration File* with `Mini_ADAS_F407.ioc`.)
+1. In STM32CubeIDE: *File → New → STM32 Project from an Existing STM32CubeMX Configuration File* → select `Mini_ADAS_F407/Mini_ADAS_F407.ioc`.
+   (Eclipse `.project`/`.cproject` files are not in the repo, so the project is recreated from the `.ioc`; all `USER CODE` sections are kept.)
 2. Connect the board via the **mini-USB (ST-LINK)** port.
 3. Build with **Ctrl+B**.
 4. Debug with **F11** – the program stops at `main()`; press **F8** to run.
