@@ -8,6 +8,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Added
 - GitHub Actions CI: SIL tests, PC simulation, plots and an ARM GCC firmware build
   (`ci/Makefile`) on every push; build artifacts (.elf/.hex/.map) uploaded.
+- CI uses the official Arm GNU Toolchain 13.3.Rel1 (cached) instead of the slow
+  Ubuntu package, pinned to ubuntu-24.04 with job timeouts and Node 24 actions.
 - Architecture diagram of the implemented firmware (`docs/architecture.png`).
 - MIT license for own code (third-party licenses unchanged).
 - README: status line, highlights section, badges.

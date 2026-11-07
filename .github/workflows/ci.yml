@@ -4,26 +4,32 @@ on:
   push:
   pull_request:
 
+# A newer push to the same branch cancels the older, still-running CI run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   sil-tests:
     name: SIL tests (firmware logic on PC)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build and run SIL tests
         run: make -C ADAS_Testing test
       - name: Run PC simulation
         run: |
           make -C ADAS_Testing adas_sim
           cd ADAS_Testing && ./adas_sim > sim_log.txt
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Generate plots
         run: |
           pip install pandas matplotlib
           cd ADAS_Testing && python plot.py sim_log.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: sil-results
           path: |
@@ -33,16 +39,21 @@ jobs:
 
   firmware-build:
     name: Firmware build (arm-none-eabi-gcc)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - name: Install ARM GCC
-        run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+      - uses: actions/checkout@v6
+      # Official Arm GNU toolchain, downloaded from Arm and cached between runs
+      # (13.3.Rel1 = the GCC version shipped with current STM32CubeIDE releases).
+      - name: Install Arm GNU Toolchain
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: '13.3.Rel1'
       - name: Build firmware
         run: |
           arm-none-eabi-gcc --version | head -1
           make -C ci -j"$(nproc)"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: firmware
           path: |
