@@ -1,353 +1,252 @@
-🚗 STM32 Mini ADAS Subsystem (FreeRTOS)
+# 🚗 STM32 Mini ADAS Subsystem (FreeRTOS)
 
- 📌 Overview
+A real-time **Advanced Driver Assistance System (ADAS)** prototype built on STM32 with **FreeRTOS (CMSIS-RTOS v2)**.
+It reads sensor data (lane position, obstacle distance, speed), evaluates the risk level and warns the driver with **LEDs** and **UART/SWV messages**.
 
-## 🧪 ADAS Testing & Validation System
+The project was developed simulation-first (C simulation + Software-in-the-Loop tests) and is now **running and tested on real hardware: an STM32F407G-DISC1 Discovery board**.
 
-To ensure reliability before deploying to STM32 hardware, a complete testing pipeline is implemented.
-
-### Features
-
-- CSV-based test case execution
-- Automated PASS/FAIL validation
-- Execution time measurement
-- Logging system (`log.csv`)
-- Data visualization using Python (matplotlib)
-- Interactive dashboard using Streamlit
-
-### Workflow
-
-Test Cases → C Logic → CSV Log → Graphs → Dashboard
-
-### Files
-
-- ADAS_Testing/test.c → test execution engine
-- ADAS_Testing/test_cases.csv → input scenarios
-- ADAS_Testing/log.csv → output logs
-- ADAS_Testing/plot.py → graph visualization
-- ADAS_Testing/dashboard.py → interactive UI
-
-## 📊 Visualization & Dashboard
-
-The system provides:
-
-- Distance vs Test Case graph
-- Execution Time analysis
-- PASS/FAIL tracking
-- Interactive dashboard for live testing
-
-This simulates real-world ADAS validation tools used in industry.
-
-This project implements a real-time ADAS (Advanced Driver Assistance System) prototype on STM32 using FreeRTOS.
-
-It simulates core automotive safety features such as:
-
-* 🚧 Lane Departure Warning
-* 🚗 Obstacle Proximity Alert
-
-The system is designed using a modular RTOS-based architecture, similar to real automotive ECUs.
+![Block diagram](MINI%20ADAS%20BLOCK%20DIAGRAM.png)
 
 ---
 
- 🧠 System Architecture
+## 📌 Project Status
 
-### Base RTOS Pipeline
-
-SensorTask → sensorQueue → DecisionTask → alertQueue → AlertTask
-
- ---
-
-## ⚡ Enhanced RTOS Architecture (Upgraded)
-
-The system was further improved to include a **multi-stage real-time processing pipeline**:
-
-SensorTask → FilterTask → DecisionTask → Event Flags → AlertTask → LoggerTask
-
-### Improvements Added 03/05/2026
-
-- **FilterTask** → Simulates real-world sensor noise filtering  
-- **Event Flags** → Enables event-driven alert triggering (no polling)  
-- **LoggerTask** → Centralized system logging  
-- **Task Priorities** → Ensures deterministic real-time execution  
-
-### Priority Design
-
-| Task | Priority |
+| Area | Status |
 |------|--------|
-| DecisionTask | High |
-| SensorTask | Above Normal |
-| FilterTask | Normal |
-| AlertTask | Low |
-| LoggerTask | Low |
+| RTOS architecture (6 tasks, queues, event flags, mutex) | ✅ Done |
+| Dynamic risk assessment (SAFE → CRITICAL) | ✅ Done |
+| Software-in-the-Loop validation (C, CSV, Python, Streamlit) | ✅ Done |
+| **Port to STM32F407 Discovery and test on hardware** | ✅ Done (Nov 2026) |
+| LED alerts on the board | ✅ Done |
+| CAN bus documentation | ✅ Done ([README_CAN_INTEGRATION.md](README_CAN_INTEGRATION.md)) |
+| Real sensors, CAN on hardware, on-target unit tests | 🔜 Planned |
 
-This architecture closely resembles real automotive ECU software design.
-
----
-
-SensorTask → sensorQueue → DecisionTask → alertQueue → AlertTask
+> Sensor values are currently **simulated** (pseudo-random) inside `SensorTask`.
 
 ---
 
- ⚙️ Task Responsibilities
-
- SensorTask
-
-* Simulates input data (lane status & obstacle distance)
-* Sends structured data via sensorQueue
-
- DecisionTask
-
-* Receives sensor data
-* Applies safety logic:
-
-  * Lane deviation detection
-  * Obstacle distance threshold
-* Sends decisions via alertQueue
-
- AlertTask
-
-* Receives alert signals
-* Outputs warnings (UART / future buzzer/LED)
-
----
-
- 🔥 Key Features
-
-* Real-time task scheduling using FreeRTOS (CMSIS-RTOS v2)
-* Inter-task communication using message queues
-* Modular and scalable system design
-* UART-based debugging output (printf redirection)
-* Automotive-style pipeline architecture
-* Dynamic ADAS risk assessment system
-* Intelligent action recommendation based on speed and obstacle distance
-
----
-
- 🔄 Data Flow Explained
-
-1. SensorTask generates:
-
-   * lane_status (0/1)
-   * obstacle_distance (0–100)
-
-2. Data is sent via sensorQueue
-
-3. DecisionTask processes:
-
-   * Lane deviation → Warning
-   * Distance < threshold → Alert
-
-4. Alert data is sent via alertQueue
-
-5. AlertTask outputs:
-   ALERT: Lane Deviation!
-   ALERT: Obstacle Too Close!
-
----
-
-## ⚠️ Dynamic Risk Assessment System (15/05/2026)
-
-The ADAS logic was further upgraded with a dynamic risk evaluation system.
-
-### Risk Levels
-
-| Risk Level | Trigger Condition |
-|------------|------------------|
-| SAFE | Normal conditions |
-| LOW_RISK | Moderate speed / distance |
-| MEDIUM_RISK | High speed or close obstacle |
-| HIGH_RISK | Very high speed or dangerous distance |
-| CRITICAL_RISK | Collision-level conditions |
-
-### Example Actions
-
-- Stay Alert
-- Reduce Speed
-- Slow Down Immediately
-- APPLY BRAKES!
-
-This upgrade transforms the project from a basic warning system into a more intelligent ADAS decision-making prototype.
-
----
-
----
-
- 💻 C Simulation Version (Windows Runnable)
-
-To validate logic before hardware deployment, a simplified C-based simulation is implemented.
-
- Features
-
-* Lane change detection
-* Obstacle distance monitoring
-* Speed-based activation logic
-* Console alerts
-
----
-
- Simulation Code
+## 📁 Repository Structure
 
 ```
-#include <stdio.h>
-
-int main() {
-int lane_status, distance, speed;
-
-printf("Enter lane status (0 = Normal, 1 = Lane Change): ");
-scanf("%d", &lane_status);
-
-printf("Enter obstacle distance (in meters): ");
-scanf("%d", &distance);
-
-printf("Enter vehicle speed (kmph): ");
-scanf("%d", &speed);
-
-if (speed < 30) {
-    printf("ADAS inactive (Low Speed)\n");
-} else {
-    if (lane_status == 1) {
-        printf("WARNING: Lane Deviation!\n");
-    }
-    if (distance < 20) {
-        printf("ALERT: Obstacle Too Close!\n");
-    }
-    if (speed > 120) {
-        printf("WARNING: Overspeed!\n");
-    }
-}
-
-return 0;
-
-
-}
+STM32-Mini-ADAS-Subsystem/
+├── Mini_ADAS_F407/          # ✅ Main firmware – STM32F407G-DISC1 (tested on hardware)
+├── Mini_ADAS_RTOS/          # Original firmware – STM32F103C8 (Blue Pill), legacy
+├── simulation/              # Windows C simulation of the decision logic
+├── ADAS_Testing/            # SIL test pipeline (C test engine, CSV, plots, dashboard)
+├── README_CAN_INTEGRATION.md
+├── STM32ADAS.pdf
+└── MINI ADAS BLOCK DIAGRAM.png
 ```
----
-
- How to Run (Windows)
-
-gcc main.c -o adas
-adas
 
 ---
 
- 🛠 Tech Stack
+## 🛠 Hardware & Tools
 
-* Microcontroller: STM32 (ARM Cortex-M)
-* RTOS: FreeRTOS (CMSIS-RTOS v2)
-* Language: Embedded C
-* IDE: STM32CubeIDE
-* Communication: UART (debugging)
-
----
-
-
- 🔧 Important Implementation Details
-
-Queue-Based Communication:
-
-* sensorQueue → Sensor → Decision
-* alertQueue → Decision → Alert
-
-Ensures:
-
-* Thread safety
-* Decoupled design
-* Deterministic execution
+| Item | Details |
+|------|---------|
+| Board | **STM32F407G-DISC1** – STM32F407VGT6, ARM Cortex-M4, 1 MB Flash, 192 KB RAM, on-board ST-LINK |
+| RTOS | FreeRTOS 10.3.1, CMSIS-RTOS v2 API |
+| IDE | STM32CubeIDE 1.19 |
+| Debug output | UART1 (PA9 TX, 115200 8N1) and SWV/ITM console (no adapter needed) |
+| Language | Embedded C |
+| Testing | C simulation, CSV test cases, Python (matplotlib), Streamlit |
 
 ---
 
- 📡 UART Output (Debugging)
+## 🧠 System Architecture
 
-int _write(int file, char *ptr, int len)
-{
-HAL_UART_Transmit(&huart1, (uint8_t*)ptr, len, HAL_MAX_DELAY);
-return len;
-}
+```
+SensorTask --sensorQueue--> FilterTask --filterQueue--> DecisionTask
+                                                            |
+                                          alertQueue + alertFlags (event flags)
+                                                            v
+                                   LEDs + printf  <--   AlertTask
+
+defaultTask : green LED heartbeat          LoggerTask : status + free heap every 2 s
+```
+
+### Tasks
+
+| Task | Priority | Responsibility |
+|------|----------|----------------|
+| SensorTask | Above Normal | Every 1 s generates lane (0/1), distance (0–99), speed (30–129) → `sensorQueue` |
+| FilterTask | Normal | Simulates sensor noise filtering (±2 on distance) → `filterQueue` |
+| DecisionTask | **High** | Applies risk rules, sends result to `alertQueue`, sets LANE / OBSTACLE event flags |
+| AlertTask | Low | Waits on event flags (1.5 s timeout), uses the newest alert, drives LEDs, prints alerts |
+| LoggerTask | Low | Prints system status and free heap every 2 s |
+| defaultTask | Normal | Green LED heartbeat (proves the scheduler is alive) |
+
+**Why these priorities?** The safety decision (DecisionTask) must never be delayed by slow output. Printing tasks are lowest because they are slow and not safety-critical.
+
+### Inter-task communication
+
+- **Message queues** carry data between pipeline stages (thread-safe, decoupled).
+- **Event flags** (`LANE_ALERT_FLAG`, `OBSTACLE_ALERT_FLAG`) wake AlertTask only when something happens – no polling.
+- **Mutex** serialises `printf` output from multiple tasks.
 
 ---
 
- 📊 Example Output
+## ⚠️ Risk Assessment Rules
 
-Sensor Sent -> LANE=1,DIST=8,SPEED=110
+Checked top to bottom – the first match wins:
+
+| Risk Level | Condition | Action |
+|------------|-----------|--------|
+| CRITICAL | speed > 120 **or** distance < 5 | APPLY BRAKES! |
+| HIGH | speed > 100 **or** distance < 10 | Slow Down Immediately |
+| MEDIUM | speed > 80 **or** distance < 20 | Reduce Speed |
+| LOW | speed > 50 **or** distance < 40 | Stay Alert |
+| SAFE | none of the above | – |
+
+- **Lane warning:** `lane_status == 1`
+- **Obstacle warning:** `distance < 20`
+
+---
+
+## 💡 LED Alerts (STM32F407 Discovery)
+
+| LED | Pin | Meaning |
+|-----|-----|---------|
+| 🟢 Green | PD12 | Heartbeat – blinks at 1 Hz. If it stops, the system has frozen |
+| 🟠 Orange | PD13 | Lane departure warning |
+| 🔴 Red | PD14 | Obstacle too close |
+| 🔵 Blue | PD15 | Risk HIGH or CRITICAL |
+| All 4 solid ON | – | Fault: stack overflow or RTOS object allocation failed (CPU halted on purpose) |
+
+Warning LEDs turn off automatically if no new warning arrives for 1.5 s.
+
+---
+
+## 📊 Example Output (captured on hardware via SWV)
+
+```
+LANE=1, DIST=12, SPEED=102
 ALERT: Lane Deviation!
 ALERT: Obstacle Too Close!
 RISK LEVEL: HIGH
 ACTION: Slow Down Immediately
+--------------------------
+LANE=1, DIST=70, SPEED=46
+ALERT: Lane Deviation!
+RISK LEVEL: SAFE
+--------------------------
+LANE=0, DIST=4, SPEED=116
+ALERT: Obstacle Too Close!
+RISK LEVEL: CRITICAL
+ACTION: APPLY BRAKES!
+--------------------------
+SYSTEM STATUS: Running... free heap=25440 B
+```
 
 ---
 
- 🚀 Future Improvements
+## 🔁 Porting to STM32F407 & Hardware Testing (Nov 2026)
 
-* Real sensor integration (Ultrasonic / Camera)
-* Edge AI (lane & object detection)
-* Buzzer / LED alerts
-* CAN bus communication
-* Functional safety concepts (ASIL-inspired)
----
+The original firmware targeted the STM32F103C8. It was ported to the STM32F407 Discovery board:
 
-## ⚡ Event-Driven Design (RTOS Enhancement) 03/05/2026
+**Chip configuration (`Mini_ADAS_F407.ioc`)**
+- SYS: Debug = *Trace Asynchronous Sw* (SWD + SWO for printf), HAL timebase = **TIM6** (FreeRTOS owns SysTick)
+- USART1: asynchronous, 115200 baud, PA9/PA10
+- FreeRTOS: CMSIS_V2, heap 32 KB, stack overflow check = option 2, newlib reentrant enabled
+- Clock: HSI 16 MHz
+- LEDs PD12–PD15 configured in the `USER CODE` section of `MX_GPIO_Init()`
 
-Instead of relying only on queues, the system uses **Event Flags** for alert signaling:
+### 🐞 Bugs found during hardware testing
 
-- Lane deviation → LANE_ALERT_FLAG  
-- Obstacle detection → OBSTACLE_ALERT_FLAG  
+Testing on real hardware exposed issues that were not visible in simulation:
 
-This allows:
+| Bug | Effect | Fix |
+|-----|--------|-----|
+| FreeRTOS heap only 3 KB | The last tasks/objects silently failed to allocate | Heap increased to 32 KB; every RTOS object is checked after creation |
+| DecisionTask never sent the alert to `alertQueue` | AlertTask printed a risk level from uninitialised memory | DecisionTask now sends the alert before setting the flags |
+| Old alerts stayed in `alertQueue` | Wrong risk was reported (e.g. speed 98 shown as LOW instead of MEDIUM) | AlertTask drains the queue and uses only the newest alert |
+| 128-word stacks with `printf` | Risk of stack overflow | 256-word stacks + overflow hook (all LEDs on, CPU halted) |
+| `printf` from several tasks | Interleaved output lines | Mutex around the output function |
 
-- Faster response time  
-- Reduced CPU usage  
-- Real-time event handling  
-
-This is a common design pattern in safety-critical embedded systems.
-
----
----
-
- 🎯 What This Project Demonstrates
-
-* RTOS-based embedded design
-* Task scheduling & synchronization
-* Inter-task communication
-* Real-time decision making
-* Automotive system architecture thinking
+### Known limitations
+- A CRITICAL risk caused **only by speed** raises no alert, because AlertTask wakes only on lane/obstacle flags. Planned fix: add a `RISK_ALERT_FLAG` for HIGH/CRITICAL.
+- An occasional duplicated `SYSTEM STATUS` line has been seen in the SWV console; cause not yet confirmed.
 
 ---
 
- 👨‍💻 Author
+## ▶️ Build, Flash & Run (STM32F407 Discovery)
 
-Mohit Babu Pasam
+1. In STM32CubeIDE: *File → New → STM32 Project from an Existing STM32CubeMX Configuration File* → select `Mini_ADAS_F407/Mini_ADAS_F407.ioc`.
+   (Eclipse `.project`/`.cproject` files are not in the repo, so the project is recreated from the `.ioc`; all `USER CODE` sections are kept.)
+2. Connect the board via the **mini-USB (ST-LINK)** port.
+3. Build with **Ctrl+B**.
+4. Debug with **F11** – the program stops at `main()`; press **F8** to run.
+5. To see `printf` output without a USB-UART adapter:
+   - Debug configuration → *Debugger* tab → enable **Serial Wire Viewer**, core clock **16 MHz**
+   - *Window → Show View → SWV → SWV ITM Data Console* → settings → enable **port 0**
+   - While halted, press **Start Trace**, then resume.
+6. Optional: enable *RTOS Proxy* (driver FreeRTOS, port ARM_CM4F) to see all FreeRTOS threads in the Debug view.
 
+> Only write code between `/* USER CODE BEGIN */` and `/* USER CODE END */` – CubeMX overwrites everything else when regenerating.
+
+---
+
+## 🧪 Software-in-the-Loop (SIL) Validation
+
+Before hardware was available, the logic was validated on the PC:
+
+- CSV-based test case execution with automated PASS/FAIL validation
+- Execution time measurement and logging (`log.csv`)
+- Graphs with Python (matplotlib) and an interactive Streamlit dashboard
+
+**Workflow:** Test Cases → C Logic → CSV Log → Graphs → Dashboard
+
+| File | Purpose |
+|------|---------|
+| `ADAS_Testing/test.c` | Test execution engine |
+| `ADAS_Testing/test_cases.csv` | Input scenarios |
+| `ADAS_Testing/log.csv` | Output log |
+| `ADAS_Testing/plot.py` | Graph visualisation |
+| `ADAS_Testing/dashboard.py` | Interactive dashboard |
+
+### 💻 C Simulation (Windows)
+
+`simulation/adas_simulation.c` is a console version of the decision logic for quick checks:
+
+```
+gcc simulation/adas_simulation.c -o adas
+adas
+```
+
+---
+
+## 📡 CAN Bus
+
+CAN integration design (ECU-style messages, timing, EMC, analyzers) is documented in
+[README_CAN_INTEGRATION.md](README_CAN_INTEGRATION.md). CAN on hardware is planned next (CAN1 loopback mode first).
+
+---
+
+## 🚀 Roadmap
+
+- [ ] Alert for speed-only HIGH/CRITICAL risk (`RISK_ALERT_FLAG`)
+- [ ] On-target unit tests and fixed test vectors (`ADAS_TEST_MODE`)
+- [ ] User button (PA0) as driver acknowledge via EXTI interrupt + semaphore
+- [ ] Watchdog (IWDG) with task health monitoring
+- [ ] CAN1 loopback alert frames
+- [ ] Real sensors: HC-SR04 ultrasonic (distance), ADC input (lane position)
+- [ ] Shared decision-logic module used by both simulation and firmware
+- [ ] Edge AI for lane/object detection
+
+---
+
+## 🎯 What This Project Demonstrates
+
+- RTOS-based embedded design: task priorities, queues, event flags, mutexes
+- Porting firmware between STM32 families (F1 → F4) with STM32CubeMX
+- Debugging on real hardware: SWV/ITM tracing, FreeRTOS thread awareness, stack/heap analysis
+- Finding and fixing concurrency and memory bugs
+- Simulation-first development with SIL validation
+- Automotive ECU-style architecture thinking
+
+---
+
+## 👨‍💻 Author
+
+**Mohit Babu Pasam**
 Email: mohitbabuuol@gmail.com
-
----
-
- 📌 Notes
-
-This project includes both a simulation-based validation system and an embedded RTOS implementation, demonstrating a complete ADAS development pipeline.
-It can be extended to real-world automotive applications with hardware integration.
----
-
-## 🧪 Software-in-the-Loop (SIL) Validation 03/05/2026
-
-Since hardware was not available, the system was validated using:
-
-- C-based simulation (logic validation)
-- CSV-based test scenarios
-- Automated PASS/FAIL testing
-- Logging and visualization tools
-
-This approach ensures correctness before deployment to actual hardware, similar to industry testing workflows.
-
----
-
-## 📌 Current Project Status
-
-✅ RTOS-based embedded architecture implemented  
-✅ Event-driven alert handling completed  
-✅ Software-in-the-Loop (SIL) validation completed  
-✅ CSV-based automated testing implemented  
-✅ Dynamic ADAS risk assessment implemented  
-
-Project currently represents a software-focused automotive ADAS prototype designed using industry-inspired embedded system principles.
-
----
