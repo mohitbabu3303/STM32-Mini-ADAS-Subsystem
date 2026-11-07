@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  sil-tests:
+    name: SIL tests (firmware logic on PC)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run SIL tests
+        run: make -C ADAS_Testing test
+      - name: Run PC simulation
+        run: |
+          make -C ADAS_Testing adas_sim
+          cd ADAS_Testing && ./adas_sim > sim_log.txt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate plots
+        run: |
+          pip install pandas matplotlib
+          cd ADAS_Testing && python plot.py sim_log.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sil-results
+          path: |
+            ADAS_Testing/log.csv
+            ADAS_Testing/sim_log.txt
+            ADAS_Testing/screenshots/*.png
+
+  firmware-build:
+    name: Firmware build (arm-none-eabi-gcc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ARM GCC
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+      - name: Build firmware
+        run: |
+          arm-none-eabi-gcc --version | head -1
+          make -C ci -j"$(nproc)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            ci/build/Mini_ADAS_RTOS.elf
+            ci/build/Mini_ADAS_RTOS.hex
+            ci/build/Mini_ADAS_RTOS.map

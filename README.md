@@ -1,5 +1,14 @@
 # STM32 Mini ADAS Subsystem (FreeRTOS + CAN)
 
+[![CI](https://github.com/mohitbabu3303/STM32-Mini-ADAS-Subsystem/actions/workflows/ci.yml/badge.svg)](https://github.com/mohitbabu3303/STM32-Mini-ADAS-Subsystem/actions/workflows/ci.yml)
+![MCU](https://img.shields.io/badge/MCU-STM32F103C8-03234B)
+![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS%2010.3.1-green)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
+> **Status:** firmware compiles cleanly and all 219 SIL checks pass (in CI on every push).
+> Hardware bring-up on a Blue Pill is **pending** - nothing below is claimed as
+> measured on the target yet.
+
 A small ADAS ECU prototype on an **STM32F103C8T6 (Blue Pill)**: FreeRTOS tasks
 process (simulated) sensor data, evaluate lane-departure / obstacle /
 overspeed risk, drive a warning LED, exchange data over **CAN at 500 kbit/s**
@@ -11,9 +20,21 @@ exercise exactly the code that runs on the MCU.
 > (no physical sensors yet). CAN runs in **silent loopback** by default so the
 > full CAN path can be tested on a bare board without a transceiver.
 
+## Highlights
+
+- **FreeRTOS (CMSIS-RTOS2)** - 7 tasks with defined priorities, queue-based communication, fixed-rate sampling with `osDelayUntil`
+- **Interrupt-driven bxCAN driver** - 500 kbit/s, 3 message types, ISR-to-task hand-off via queue
+- **Runtime health monitoring** - task heartbeats, stack/heap watermarks, queue overflows, CAN error counters, status frame on the bus
+- **Debuggable by design** - fault hooks halt in the debugger, `g_adas_debug` for Live Expressions, single logger task owning the UART
+- **Shared logic, tested on PC** - `adas_logic.c` / `adas_can.c` are compiled into both the firmware and the SIL suite (25 scenarios, 219 checks, GitHub Actions CI)
+
 ---
 
 ## Architecture
+
+![Firmware architecture](docs/architecture.png)
+
+Text version:
 
 ```
             sensorQueue               alertQueue
@@ -99,7 +120,8 @@ and fault handlers halt in the debugger (`BKPT`) when one is attached.
 2. *Project → Build* (Debug configuration).
 3. Connect ST-LINK and start **Run → Debug** with `Mini_ADAS_RTOS.launch`.
 4. Watch the system without a UART adapter: *Window → Show View → Live Expressions*, add `g_adas_debug`.
-5. With a UART adapter: open a terminal at **115200 baud**. Expected start:
+5. With a UART adapter: open a terminal at **115200 baud**. The start should look like this
+   (*illustrative - written from the code, not yet captured from a board*):
 
 ```
 === STM32 Mini ADAS (FreeRTOS + CAN) ===
@@ -117,8 +139,10 @@ Code generation is safe: all application code lives in `app_*.c` / `adas_*.c`
 and is called from `USER CODE` sections in `main.c`, so *Generate Code* in
 CubeMX does not overwrite it.
 
-**Memory (Debug build, approx.):** flash ≈ 20–25 KB of 64 KB, RAM ≈ 17.6 KB of 20 KB
-(including a 12 KB FreeRTOS heap; tasks + queues use ≈ 10.2 KB of it).
+**Memory (estimate):** RAM ≈ 17.6 KB of 20 KB, including the 12 KB FreeRTOS heap
+(tasks + queues use ≈ 10.2 KB of it); flash ≈ 20–25 KB of 64 KB. These numbers come from a
+clang/LLD test build - the exact GCC figures are printed by the CI firmware build
+(`--print-memory-usage`, see the *Firmware build* job log).
 
 ---
 
@@ -154,16 +178,24 @@ Mini_ADAS_RTOS/            STM32CubeIDE project (open the .ioc in CubeMX)
   Core/Src/main.c          CubeMX init + task creation
 ADAS_Testing/              SIL tests, plots, Streamlit dashboard
 simulation/                PC simulation of the firmware pipeline
+ci/Makefile                command-line ARM GCC build used by GitHub Actions
+.github/workflows/ci.yml   CI: SIL tests + firmware build on every push
+docs/                      architecture diagram; docs/concept/ = original proposal (not implemented)
 ```
 
 ## Limitations and next steps
 
 * Sensors are simulated; next: ultrasonic/LiDAR (TF-Luna) driver feeding `SensorTask`.
-* Verified by compilation, linking and SIL tests; CAN has only been exercised in loopback,
-  not yet on a physical bus with a second node.
+* Verified by compilation, linking and SIL tests only; **not yet run on hardware**. CAN has
+  only been designed for loopback, not yet tested on a physical bus with a second node.
 * Clock is the internal 8 MHz HSI; 72 MHz via HSE + PLL is possible on boards with a crystal.
 * No independent watchdog yet (IWDG with debug-freeze is the next robustness step).
 * Educational prototype, not developed to ISO 26262.
+
+## License
+
+Own code: [MIT](LICENSE). STM32 HAL/CMSIS (STMicroelectronics) and FreeRTOS keep their own
+licenses, see the `LICENSE.txt` files in `Mini_ADAS_RTOS/Drivers` and `Middlewares`.
 
 ## Author
 

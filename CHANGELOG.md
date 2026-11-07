@@ -3,6 +3,20 @@
 All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Added
+- GitHub Actions CI: SIL tests, PC simulation, plots and an ARM GCC firmware build
+  (`ci/Makefile`) on every push; build artifacts (.elf/.hex/.map) uploaded.
+- Architecture diagram of the implemented firmware (`docs/architecture.png`).
+- MIT license for own code (third-party licenses unchanged).
+- README: status line, highlights section, badges.
+
+### Changed
+- Original proposal PDF and concept block diagram moved to `docs/concept/` and
+  marked as not implemented (they describe a larger STM32F4 system).
+- README example UART output marked as illustrative; memory figures marked as estimates.
+
 ## [1.1.0] - 2026-11-07
 
 ### Fixed
